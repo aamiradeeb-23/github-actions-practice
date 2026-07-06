@@ -10,27 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Initialize the OpenTelemetry Trace Collector Wrapper
+      - name: OpenTelemetry Trace Initialization
+        uses: honeycombio/gha-otel-trace@v1
+        with:
+          endpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          headers: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Download and properly extract the real otel-cli binary
-      - name: Install OTel CLI
+      # 2. Execute pipeline workload steps cleanly
+      - name: Run Dummy Build/Test
         run: |
-          wget https://github.com
-          tar -xf otel-cli_0.4.3_linux_amd64.tar.gz
-          chmod +x otel-cli
-          sudo mv otel-cli /usr/local/bin/
-
-      # 2. Run the trace configuration wrapper
-      - name: Run Build and Trace Step
-        env:
-          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-        run: |
-          echo "Starting observable build..."
-          
-          otel-cli exec \
-            --service github-actions-ci \
-            --name "Simulated Build & Test Step" \
-            -- \
-            sh -c "echo 'Compiling application assets...'; sleep 5; echo 'Build successful!'"
+          echo "Simulating application build..."
+          sleep 5
+          echo "Build successful!"
