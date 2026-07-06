@@ -1,14 +1,32 @@
-# This code is from https://github.com/LondheShubham153/flask-app-ecs/tree/main
-# Flask App
-from flask import Flask, render_template
-app = Flask(__name__)
+import time
+import random
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-@app.route('/')
-def hello_world():
-    return render_template('index.html')
+trace.set_tracer_provider(TracerProvider())
 
+tracer = trace.get_tracer(__name__)
 
-@app.route('/health')
-def health():
-    return 'Server is up and running'
+otlp_exporter = OTLPSpanExporter(
+    endpoint="http://localhost:4317",
+    insecure=True,
+)
+
+span_processor = BatchSpanProcessor(otlp_exporter)
+
+trace.get_tracer_provider().add_span_processor(span_processor)
+
+with tracer.start_as_current_span("github-action-run"):
+
+    print("Application Started")
+
+    duration = random.randint(2,5)
+
+    time.sleep(duration)
+
+    print(f"Execution Time : {duration} seconds")
+
+    print("Application Finished")
