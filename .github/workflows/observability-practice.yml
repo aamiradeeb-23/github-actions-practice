@@ -13,14 +13,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Setup the official OpenTelemetry CLI tool
+      # 1. Download and properly extract the real otel-cli binary
       - name: Install OTel CLI
         run: |
-          curl -sSLo otel-cli https://github.com
+          wget https://github.com
+          tar -xf otel-cli_0.4.3_linux_amd64.tar.gz
           chmod +x otel-cli
           sudo mv otel-cli /usr/local/bin/
 
-      # 2. Run your application build and trace its execution manually
+      # 2. Run the trace configuration wrapper
       - name: Run Build and Trace Step
         env:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
@@ -28,7 +29,6 @@ jobs:
         run: |
           echo "Starting observable build..."
           
-          # This command executes the code and sends a precise duration span to Grafana Cloud
           otel-cli exec \
             --service github-actions-ci \
             --name "Simulated Build & Test Step" \
