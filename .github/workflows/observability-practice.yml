@@ -9,6 +9,7 @@ jobs:
     name: Build & Export Metrics
     runs-on: ubuntu-latest
     
+    # Allows the workflow to write OTel traces
     permissions:
       contents: read
       id-token: write
@@ -24,8 +25,9 @@ jobs:
           echo "Build successful!"
 
       - name: Export Workflow Metrics to OTLP
-        uses: open-telemetry/opentelemetry-collector-github-actions@v0.1.0
+        uses: paper2/github-actions-opentelemetry@v1
         if: always()
         with:
-          otel_endpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          otel_headers: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+          otelEndpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          otelHeaders: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
