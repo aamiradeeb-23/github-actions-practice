@@ -1,65 +1,32 @@
-name: Production CI with Grafana Observability
+name: Observability Practice
+
 on:
+
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+
+    branches:
+      - main
 
 jobs:
-  build-and-observe:
-    name: Build & Stream Metrics
+
+  observe:
+
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code Repository
+
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run Core Application Compilation
-        id: build_step
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
         run: |
-          echo "Starting application build sequence..."
-          echo "Bundling codebase assets..."
-          sleep 5
-          echo "Build complete!"
+          pip install -r requirements.txt
 
-      - name: Export Telemetry Logs to Grafana Cloud
-        if: always()
-        env:
-          OTEL_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          OTEL_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+      - name: Run Application
         run: |
-          # 1. Target the raw base OTLP ingestion endpoint natively
-          FINAL_URL=$(echo "$OTEL_ENDPOINT" | sed 's/\/$//')
-          echo "Streaming metrics directly to gateway: $FINAL_URL"
-
-          # 2. Package telemetry metadata into standard OTel log structure
-          PAYLOAD=$(cat <<EOF
-          {
-            "resourceLogs": [{
-              "resource": { "attributes": [{ "key": "service.name", "value": { "stringValue": "github-actions-pipeline" } }] },
-              "scopeLogs": [{
-                "logRecords": [{
-                  "timeUnixNano": "$(date +%s%N)",
-                  "severityText": "${{ job.status }}" == "success" ? "INFO" : "ERROR",
-                  "body": { "stringValue": "Pipeline execution completed." },
-                  "attributes": [
-                    { "key": "github.repository", "value": { "stringValue": "${{ github.repository }}" } },
-                    { "key": "github.workflow", "value": { "stringValue": "${{ github.workflow }}" } },
-                    { "key": "github.run_id", "value": { "stringValue": "${{ github.run_id }}" } },
-                    { "key": "pipeline.status", "value": { "stringValue": "${{ job.status }}" } }
-                  ]
-                }]
-              }]
-            }]
-          }
-          EOF
-          )
-
-          # 3. Securely transmit payload using structured header slicing
-          HEADER_KEY=$(echo "$OTEL_HEADERS" | cut -d'=' -f1)
-          HEADER_VAL=$(echo "$OTEL_HEADERS" | cut -d'=' -f2-)
-
-          curl -L -X POST "$FINAL_URL" \
-            -H "Content-Type: application/json" \
-            -H "$HEADER_KEY: $HEADER_VAL" \
-            -d "$PAYLOAD" \
-            --fail
+          python app.py
