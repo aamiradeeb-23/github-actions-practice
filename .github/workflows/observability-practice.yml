@@ -9,7 +9,6 @@ jobs:
     name: Build & Export Metrics
     runs-on: ubuntu-latest
     
-    # We allow the workflow to write OTel traces
     permissions:
       contents: read
       id-token: write
@@ -25,9 +24,8 @@ jobs:
           echo "Build successful!"
 
       - name: Export Workflow Metrics to OTLP
-        uses: github-actions-opentelemetry/opentelemetry-github-actions@v1
-        if: always() # Ensures the observation runs even if the build fails
+        uses: open-telemetry/opentelemetry-collector-github-actions@v0.1.0
+        if: always()
         with:
-          otelEndpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          otelHeaders: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          otel_endpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          otel_headers: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
