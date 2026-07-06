@@ -25,7 +25,7 @@ jobs:
           echo "Build successful!"
 
       - name: Export Workflow Metrics to OTLP
-        uses: paper2/github-actions-opentelemetry@v2
+        uses: paper2/github-actions-opentelemetry@main
         if: always()
         with:
           otelEndpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
