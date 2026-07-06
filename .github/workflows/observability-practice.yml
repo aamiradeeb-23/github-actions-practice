@@ -1,28 +1,39 @@
-name: CI with Observability
+name: Production CI with Grafana Observability
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
 
+# Injecting standard OTel variables globally across all jobs
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+  OTEL_SERVICE_NAME: "github-actions-pipeline"
+
 jobs:
   build-and-observe:
-    name: Build & Export Metrics
+    name: Build & Stream Metrics
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Initialize the OpenTelemetry Trace Collector Wrapper
-      - name: OpenTelemetry Trace Initialization
-        uses: honeycombio/gha-otel-trace@v1
-        with:
-          endpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          headers: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-
-      - name: Checkout code
+      - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      # 2. Execute pipeline workload steps cleanly
-      - name: Run Dummy Build/Test
+      # Installing a tiny, official OTel sender binary safely via a native archive
+      - name: Initialize OpenTelemetry Instrumentation Tooling
         run: |
-          echo "Simulating application build..."
-          sleep 5
-          echo "Build successful!"
+          sudo apt-get update && sudo apt-get install -y curl tar
+          curl -sSLo otel-cli.tar.gz https://github.com
+          tar -xf otel-cli.tar.gz otel-cli
+          chmod +x otel-cli
+          sudo mv otel-cli /usr/local/bin/
+
+      # This executes your build workload and automatically streams telemetry traces to Grafana
+      - name: Run Core Application Compilation
+        run: |
+          echo "Starting application build sequence..."
+          
+          otel-cli exec \
+            --name "Execute Build Suite" \
+            -- \
+            sh -c "echo 'Bundling codebase...'; sleep 5; echo 'Build complete!'"
