@@ -25,7 +25,7 @@ jobs:
           echo "Build successful!"
 
       - name: Export Workflow Metrics to OTLP
-        uses: github-actions-opentelemetry/github-actions-opentelemetry@v1
+        uses: github-actions-opentelemetry/opentelemetry-github-actions@v1
         if: always() # Ensures the observation runs even if the build fails
         with:
           otelEndpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
