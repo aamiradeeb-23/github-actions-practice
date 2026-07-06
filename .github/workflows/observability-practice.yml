@@ -27,17 +27,11 @@ jobs:
           OTEL_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         run: |
-          # 1. Standardize and construct the correct OTLP logs URL path
-          BASE_URL=$(echo "$OTEL_ENDPOINT" | sed 's/\/$//')
-          if [[ "$BASE_URL" != */v1/logs ]]; then
-            FINAL_URL="$BASE_URL/v1/logs"
-          else
-            FINAL_URL="$BASE_URL"
-          fi
-          
-          echo "Streaming metrics to: $FINAL_URL"
+          # 1. Target the raw base OTLP ingestion endpoint natively
+          FINAL_URL=$(echo "$OTEL_ENDPOINT" | sed 's/\/$//')
+          echo "Streaming metrics directly to gateway: $FINAL_URL"
 
-          # 2. Build the payload matching the official OpenTelemetry schema
+          # 2. Package telemetry metadata into standard OTel log structure
           PAYLOAD=$(cat <<EOF
           {
             "resourceLogs": [{
@@ -60,7 +54,7 @@ jobs:
           EOF
           )
 
-          # 3. Securely transmit via curl, utilizing -L to follow redirects automatically
+          # 3. Securely transmit payload using structured header slicing
           HEADER_KEY=$(echo "$OTEL_HEADERS" | cut -d'=' -f1)
           HEADER_VAL=$(echo "$OTEL_HEADERS" | cut -d'=' -f2-)
 
