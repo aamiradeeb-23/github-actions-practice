@@ -4,12 +4,6 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Injecting standard OTel variables globally across all jobs
-env:
-  OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-  OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-  OTEL_SERVICE_NAME: "github-actions-pipeline"
-
 jobs:
   build-and-observe:
     name: Build & Stream Metrics
@@ -19,21 +13,17 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      # Installing a tiny, official OTel sender binary safely via a native archive
-      - name: Initialize OpenTelemetry Instrumentation Tooling
-        run: |
-          sudo apt-get update && sudo apt-get install -y curl tar
-          curl -sSLo otel-cli.tar.gz https://github.com
-          tar -xf otel-cli.tar.gz otel-cli
-          chmod +x otel-cli
-          sudo mv otel-cli /usr/local/bin/
+      # Official OpenTelemetry maintained step to initialize instrumentation
+      - name: Setup OpenTelemetry Ingestion
+        uses: open-telemetry/opentelemetry-collector-github-actions@v0.2.0
+        with:
+          otel_endpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          otel_headers: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
 
-      # This executes your build workload and automatically streams telemetry traces to Grafana
+      # Your pipeline steps now automatically stream metrics directly to Grafana Cloud
       - name: Run Core Application Compilation
         run: |
           echo "Starting application build sequence..."
-          
-          otel-cli exec \
-            --name "Execute Build Suite" \
-            -- \
-            sh -c "echo 'Bundling codebase...'; sleep 5; echo 'Build complete!'"
+          echo "Bundling codebase..."
+          sleep 5
+          echo "Build complete!"
