@@ -8,26 +8,29 @@ jobs:
   build-and-observe:
     name: Build & Export Metrics
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      id-token: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Dummy Build/Test
+      # 1. Setup the official OpenTelemetry CLI tool
+      - name: Install OTel CLI
         run: |
-          echo "Simulating application build..."
-          sleep 5
-          echo "Build successful!"
+          curl -sSLo otel-cli https://github.com
+          chmod +x otel-cli
+          sudo mv otel-cli /usr/local/bin/
 
-      - name: Export Workflow Metrics to OTLP
-        uses: paper2/github-actions-opentelemetry@main
-        if: always()
+      # 2. Run your application build and trace its execution manually
+      - name: Run Build and Trace Step
         env:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Starting observable build..."
+          
+          # This command executes the code and sends a precise duration span to Grafana Cloud
+          otel-cli exec \
+            --service github-actions-ci \
+            --name "Simulated Build & Test Step" \
+            -- \
+            sh -c "echo 'Compiling application assets...'; sleep 5; echo 'Build successful!'"
