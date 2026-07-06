@@ -13,7 +13,6 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
 
-      # A mock build step that represents your application compilation
       - name: Run Core Application Compilation
         id: build_step
         run: |
@@ -22,7 +21,6 @@ jobs:
           sleep 5
           echo "Build complete!"
 
-      # Sends pipeline execution metrics safely using native node scripting
       - name: Export Telemetry Traces to Grafana Cloud
         if: always()
         env:
@@ -32,7 +30,6 @@ jobs:
           node -e "
           const http = require('https');
           
-          // Parse the authentication strings from your headers secret
           const headers = { 'Content-Type': 'application/json' };
           const rawHeaders = process.env.OTEL_HEADERS || '';
           if (rawHeaders.includes('=')) {
@@ -40,7 +37,6 @@ jobs:
             headers[key.trim()] = val.trim();
           }
 
-          // Build a standard OTel formatted log packet mapping the job health
           const payload = JSON.stringify({
             resourceLogs: [{
               resource: { attributes: [{ key: 'service.name', value: { stringValue: 'github-actions-pipeline' } }] },
@@ -60,9 +56,19 @@ jobs:
             }]
           });
 
-          // Post the data cleanly over standard HTTPS hooks to Grafana Labs
-          const url = process.env.OTEL_ENDPOINT + '/v1/logs';
-          const req = http.request(url, { method: 'POST', headers }, (res) => {
+          // Normalize the base endpoint path cleanly to strip any accidental double-slashes
+          let baseUrl = process.env.OTEL_ENDPOINT.trim();
+          if (baseUrl.endsWith('/')) {
+            baseUrl = baseUrl.slice(0, -1);
+          }
+          if (baseUrl.endsWith('/otlp')) {
+            baseUrl = baseUrl.slice(0, -5);
+          }
+          
+          const finalUrl = baseUrl + '/v1/logs';
+          console.log('Sending metrics to target endpoint:', finalUrl);
+
+          const req = http.request(finalUrl, { method: 'POST', headers }, (res) => {
             console.log('Telemetry Response Status:', res.statusCode);
             process.exit(res.statusCode >= 200 && res.statusCode < 300 ? 0 : 1);
           });
